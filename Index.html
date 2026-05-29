@@ -1,0 +1,2479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Script Converter — Word to Excel</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  :root {
+    --primary: #1f4e78;
+    --primary-light: #2d6ca8;
+    --bg: #f5f7fa;
+    --card-bg: #ffffff;
+    --border: #d9dee5;
+    --text: #1a2332;
+    --text-muted: #5a6478;
+    --accent-orange: #ff9900;
+    --success: #2d8659;
+    --danger: #c5384a;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  header {
+    background: var(--primary);
+    color: white;
+    padding: 18px 28px;
+    box-shadow: var(--shadow);
+  }
+  header h1 { margin: 0; font-size: 20px; font-weight: 600; }
+  header p { margin: 4px 0 0 0; font-size: 13px; opacity: 0.85; }
+  main { padding: 24px 28px; max-width: 100%; }
+  .step-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+  }
+  .step-card h2 {
+    margin: 0 0 12px 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px; height: 24px;
+    background: var(--primary);
+    color: white;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .upload-area {
+    display: block;
+    border: 2px dashed var(--border);
+    border-radius: 6px;
+    padding: 40px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #fafbfc;
+  }
+  .upload-area:hover, .upload-area.dragover {
+    border-color: var(--primary);
+    background: #eff5fb;
+  }
+  .upload-area.has-file {
+    border-style: solid;
+    border-color: var(--success);
+    background: #f0f9f4;
+  }
+  .upload-area input { display: none; }
+  .upload-icon {
+    font-size: 36px;
+    margin-bottom: 10px;
+    opacity: 0.55;
+    line-height: 1;
+  }
+  .upload-text {
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+  .upload-text strong { color: var(--primary); }
+  .upload-hint {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    opacity: 0.8;
+  }
+  .file-info {
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--success);
+    font-weight: 500;
+  }
+  .controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .controls .meta {
+    margin-left: auto;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+  button {
+    font-family: inherit;
+    font-size: 13px;
+    padding: 8px 14px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: white;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-weight: 500;
+  }
+  button:hover:not(:disabled) { background: #f0f3f7; border-color: #b8c1cd; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.primary {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+  }
+  button.primary:hover:not(:disabled) { background: var(--primary-light); border-color: var(--primary-light); }
+  button.danger { color: var(--danger); border-color: #e5b8be; }
+  button.danger:hover:not(:disabled) { background: #fdf2f4; }
+  button.small { padding: 4px 8px; font-size: 12px; }
+
+  .table-wrap {
+    overflow: auto;
+    max-height: 70vh;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: white;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 12.5px;
+    table-layout: fixed;
+  }
+  thead {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+  th {
+    background: var(--primary);
+    color: white;
+    font-weight: 600;
+    padding: 10px 8px;
+    text-align: left;
+    border: 1px solid var(--primary-light);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  th.tip-col { cursor: help; }
+  td {
+    border: 1px solid #e5e9ef;
+    padding: 0;
+    vertical-align: top;
+    background: white;
+  }
+  td.row-actions {
+    width: 70px;
+    text-align: center;
+    padding: 6px;
+    background: #fafbfc;
+  }
+  td .cell-edit {
+    width: 100%;
+    min-height: 32px;
+    padding: 6px 8px;
+    border: none;
+    font-family: inherit;
+    font-size: 12.5px;
+    resize: vertical;
+    background: transparent;
+    color: inherit;
+    line-height: 1.4;
+  }
+  td .cell-edit:focus {
+    outline: 2px solid var(--primary-light);
+    outline-offset: -2px;
+    background: #fafdff;
+  }
+  td.negative .cell-edit {
+    color: var(--accent-orange);
+    font-weight: 500;
+  }
+  tr.section-divider td {
+    background: #eef2f7;
+  }
+  tr.section-divider td.row-actions { background: #e6ebf2; }
+  .row-actions button {
+    padding: 2px 6px;
+    font-size: 11px;
+    margin: 1px;
+  }
+
+  /* Column widths matching Excel template */
+  col.c-actions      { width: 75px;  }
+  col.c-timeframe    { width: 110px; }
+  col.c-category     { width: 130px; }
+  col.c-qnum         { width: 70px;  }
+  col.c-language     { width: 130px; }
+  col.c-voice        { width: 340px; }
+  col.c-sms          { width: 300px; }
+  col.c-restitle     { width: 140px; }
+  col.c-voiceresp    { width: 220px; }
+  col.c-smsresp      { width: 220px; }
+  col.c-next         { width: 150px; }
+  col.c-alert        { width: 90px;  }
+  col.c-issue        { width: 110px; }
+  col.c-negative     { width: 80px;  }
+
+  .negative-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 8px;
+    gap: 4px;
+  }
+  .negative-toggle input { cursor: pointer; }
+  .negative-toggle label { cursor: pointer; font-size: 11px; color: var(--text-muted); }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-muted);
+  }
+  .help-text {
+    background: #fff8e6;
+    border: 1px solid #f4dba6;
+    border-radius: 4px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #6b5417;
+    margin-bottom: 14px;
+  }
+  .help-text strong { color: #4a3a10; }
+  .legend {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-swatch {
+    width: 14px; height: 14px;
+    border-radius: 2px;
+    border: 1px solid #ccc;
+  }
+  #toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--text);
+    color: white;
+    padding: 10px 16px;
+    border-radius: 4px;
+    font-size: 13px;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.2s;
+    pointer-events: none;
+    z-index: 1000;
+    max-width: 400px;
+  }
+  #toast.show { opacity: 1; transform: translateY(0); }
+  #toast.error { background: var(--danger); }
+  #toast.success { background: var(--success); }
+
+  .meta-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .meta-fields label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+  .meta-fields input[type="text"] {
+    width: 100%;
+    padding: 7px 9px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 13px;
+  }
+  .meta-fields input[type="text"]:focus { outline: 2px solid var(--primary-light); outline-offset: -1px; }
+
+  /* Language multiselect picker */
+  .lang-picker { position: relative; }
+  .lang-picker-btn {
+    width: 100%;
+    padding: 7px 9px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 13px;
+    background: white;
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: normal;
+  }
+  .lang-picker-btn:hover { border-color: #b8c1cd; }
+  .lang-picker-btn[aria-expanded="true"] {
+    border-color: var(--primary-light);
+    box-shadow: 0 0 0 1px var(--primary-light);
+  }
+  .lang-picker-caret {
+    color: var(--text-muted);
+    font-size: 11px;
+    margin-left: 8px;
+  }
+  .lang-picker-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    z-index: 100;
+    padding: 4px 0;
+    max-height: 240px;
+    overflow-y: auto;
+  }
+  .lang-picker-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    cursor: pointer;
+    font-size: 13px;
+    user-select: none;
+  }
+  .lang-picker-option:hover { background: #f0f3f7; }
+  .lang-picker-option input { cursor: pointer; }
+  .lang-picker-empty {
+    padding: 8px 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  /* Debug panel - hidden by default */
+  #debugPanel {
+    margin-top: 12px;
+    padding: 10px;
+    background: #f8f9fb;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 11px;
+    max-height: 200px;
+    overflow: auto;
+    display: none;
+  }
+  #debugPanel.visible { display: block; }
+
+  /* Document tabs (one per uploaded file) */
+  .doc-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    margin-bottom: 16px;
+    border-bottom: 2px solid var(--primary);
+    align-items: flex-end;
+  }
+  .doc-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: #e9edf3;
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+    font-size: 13px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    max-width: 260px;
+    position: relative;
+    top: 1px;
+  }
+  .doc-tab:hover {
+    background: #f0f3f7;
+    color: var(--text);
+  }
+  .doc-tab.active {
+    background: white;
+    color: var(--primary);
+    font-weight: 600;
+    border-color: var(--primary);
+    border-bottom-color: white;
+    top: 2px;
+    z-index: 1;
+  }
+  .doc-tab-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 200px;
+  }
+  .doc-tab-close {
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0 4px;
+    cursor: pointer;
+    opacity: 0.5;
+    border-radius: 3px;
+  }
+  .doc-tab-close:hover {
+    opacity: 1;
+    background: rgba(0,0,0,0.08);
+    color: var(--danger);
+  }
+  .doc-tab-add {
+    background: transparent;
+    border: 1px dashed var(--border);
+    border-radius: 4px;
+    color: var(--text-muted);
+    font-size: 12px;
+    padding: 6px 12px;
+    cursor: pointer;
+    margin-left: 6px;
+    align-self: center;
+  }
+  .doc-tab-add:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+
+  /* Rich-text editable cell (contenteditable div) */
+  .cell-rich {
+    min-height: 32px;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    outline: none;
+  }
+  /* Red text styling — preserved from source doc */
+  .t-red, .cell-rich span[style*="color: red"] {
+    color: #cc0000;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Script Converter</h1>
+  <p>Convert a Word script export into the standard Excel workbook template</p>
+</header>
+
+<main>
+
+  <div class="step-card">
+    <h2><span class="step-num">1</span> Upload Word Documents</h2>
+    <label class="upload-area" id="uploadArea">
+      <input type="file" id="fileInput" accept=".docx" multiple>
+      <div class="upload-icon">📄</div>
+      <div class="upload-text"><strong>Click to choose .docx files</strong> or drag and drop here</div>
+      <div class="upload-hint">You can select one or more .docx files. Each file becomes a tab in the exported workbook.</div>
+      <div class="file-info" id="fileInfo"></div>
+    </label>
+    <div id="debugPanel"></div>
+  </div>
+
+  <div class="step-card" id="reviewCard" style="display:none;">
+    <h2><span class="step-num">2</span> Review &amp; Edit Parsed Data</h2>
+
+    <div class="doc-tabs" id="docTabs"></div>
+
+    <div class="meta-fields">
+      <div>
+        <label>Sheet Name</label>
+        <input type="text" id="sheetName" maxlength="31">
+      </div>
+      <div>
+        <label>Workbook Title (Row 1)</label>
+        <input type="text" id="workbookTitle">
+      </div>
+      <div>
+        <label>Default Timeframe (Row 5, Col A)</label>
+        <input type="text" id="defaultTimeframe">
+      </div>
+      <div>
+        <label>Languages to Include</label>
+        <div class="lang-picker" id="langPicker">
+          <button type="button" class="lang-picker-btn" id="langPickerBtn">
+            <span id="langPickerLabel">English</span>
+            <span class="lang-picker-caret">▾</span>
+          </button>
+          <div class="lang-picker-menu" id="langPickerMenu" hidden></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="help-text">
+      <strong>How to use this grid:</strong> Every cell is editable — click and type to change anything. Text that was red in the source document is preserved in red here and in the exported Excel. Use the <strong>Highlight Orange</strong> checkbox to mark a response as a "negative" answer (orange text in Excel, matching your template's convention for responses like "No" or "Not clear"). Use ↑↓ to reorder rows, <strong>+</strong> to insert a new row below, and <strong>×</strong> to delete.
+      <div class="legend">
+        <span class="legend-item"><span class="legend-swatch" style="background:#1f4e78;"></span> Header row</span>
+        <span class="legend-item"><span class="legend-swatch" style="background:#fff; color:#ff9900; display:inline-flex; align-items:center; justify-content:center; font-weight:600;">N</span> Highlighted (orange) response</span>
+        <span class="legend-item"><span class="legend-swatch" style="background:#fff; color:#cc0000; display:inline-flex; align-items:center; justify-content:center; font-weight:600;">R</span> Red text (from source doc)</span>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="addRowBtn">+ Add Row at Bottom</button>
+      <button id="resetBtn" class="danger">Reset to Parsed</button>
+      <span class="meta" id="rowCount"></span>
+    </div>
+
+    <div class="table-wrap">
+      <table id="dataTable">
+        <colgroup>
+          <col class="c-actions">
+          <col class="c-timeframe">
+          <col class="c-category">
+          <col class="c-qnum">
+          <col class="c-language">
+          <col class="c-voice">
+          <col class="c-sms">
+          <col class="c-restitle">
+          <col class="c-voiceresp">
+          <col class="c-smsresp">
+          <col class="c-next">
+          <col class="c-alert">
+          <col class="c-issue">
+          <col class="c-negative">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Actions</th>
+            <th>Timeframe</th>
+            <th>Question Category</th>
+            <th>Question #</th>
+            <th>Language</th>
+            <th>Voice Call Question Text</th>
+            <th>SMS Question Text</th>
+            <th>Response Title</th>
+            <th>Voice Response</th>
+            <th>SMS Response</th>
+            <th>Next Question</th>
+            <th>Alert</th>
+            <th>Issue Panel</th>
+            <th class="tip-col" title="Check to highlight this response in orange in the Excel output">Highlight Orange</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="step-card" id="exportCard" style="display:none;">
+    <h2><span class="step-num">3</span> Export to Excel</h2>
+    <p style="color:var(--text-muted); margin-top:0;">When the review looks good, download the workbook. The output matches the standard template: dark-blue header row, merged category cells, orange-highlighted negative responses, and wrapped text.</p>
+    <button class="primary" id="exportBtn">⬇ Download Excel Workbook</button>
+  </div>
+
+</main>
+
+<div id="toast"></div>
+
+<script>
+/* ============================================================
+   Utilities
+   ============================================================ */
+
+function showToast(msg, type='info', duration=3500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show ' + type;
+  setTimeout(() => { t.className = ''; }, duration);
+}
+
+function debugLog(msg) {
+  const panel = document.getElementById('debugPanel');
+  panel.classList.add('visible');
+  panel.textContent += msg + '\n';
+}
+
+/* ============================================================
+   DOCX -> structured paragraphs
+   We parse the docx XML directly, no mammoth required.
+   Each paragraph becomes an object: { style, text, isListItem }
+   ============================================================ */
+
+const WNS = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+
+async function parseDocxFile(file) {
+  const buf = await file.arrayBuffer();
+  const zip = await JSZip.loadAsync(buf);
+  const docFile = zip.file('word/document.xml');
+  if (!docFile) throw new Error('Not a valid .docx file (missing word/document.xml)');
+  const xml = await docFile.async('string');
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xml, 'application/xml');
+  const parseError = doc.querySelector('parsererror');
+  if (parseError) throw new Error('Failed to parse document.xml: ' + parseError.textContent);
+
+  // Walk paragraphs in document order
+  const paragraphs = [];
+  const body = doc.getElementsByTagNameNS(WNS, 'body')[0];
+  if (!body) throw new Error('No <w:body> in document.xml');
+
+  for (const child of Array.from(body.children)) {
+    const tag = child.localName;
+    if (tag === 'p') {
+      paragraphs.push(extractParagraph(child));
+    } else if (tag === 'tbl') {
+      // Walk table cells, each cell can contain paragraphs
+      const ps = child.getElementsByTagNameNS(WNS, 'p');
+      for (const p of Array.from(ps)) paragraphs.push(extractParagraph(p));
+    }
+  }
+  return paragraphs;
+}
+
+function extractParagraph(pElem) {
+  // Style: <w:pPr><w:pStyle w:val="Heading2"/>
+  const pPr = pElem.getElementsByTagNameNS(WNS, 'pPr')[0];
+  let style = null;
+  let isListItem = false;
+  if (pPr) {
+    const pStyle = pPr.getElementsByTagNameNS(WNS, 'pStyle')[0];
+    if (pStyle) style = pStyle.getAttributeNS(WNS, 'val');
+    const numPr = pPr.getElementsByTagNameNS(WNS, 'numPr')[0];
+    if (numPr) isListItem = true;
+  }
+
+  // Build rich text: an array of runs, each { t: string, red: bool }.
+  // We walk direct <w:r> children (and one level deep for table cells if any),
+  // capture each run's color from <w:rPr><w:color>, then collect its text
+  // content including <w:br/> -> '\n' and <w:tab/> -> '\t'.
+  const runs = [];
+  // Use a TreeWalker, but operate on the run level. We need <w:r> elements
+  // directly under <w:p> (skipping <w:pPr>).
+  for (const child of Array.from(pElem.children)) {
+    if (child.namespaceURI !== WNS) continue;
+    if (child.localName !== 'r') continue;
+    const isRed = isRedRun(child);
+    let runText = '';
+    // Within the run, walk and collect <w:t>, <w:br>, <w:tab>
+    const inner = document.createTreeWalker(child, NodeFilter.SHOW_ELEMENT, null);
+    let n;
+    while ((n = inner.nextNode())) {
+      if (n.namespaceURI === WNS) {
+        if (n.localName === 't') runText += n.textContent;
+        else if (n.localName === 'br') runText += '\n';
+        else if (n.localName === 'tab') runText += '\t';
+      }
+    }
+    if (runText.length) runs.push({ t: runText, red: isRed });
+  }
+  // Also build a plain-text version for legacy consumers in the parser
+  const text = runs.map(r => r.t).join('');
+  return { style, text, runs, isListItem };
+}
+
+/**
+ * Determine if a Word run is colored red (or any reddish color).
+ * Reads <w:rPr><w:color w:val="HEX"/> on the run. Returns false if no
+ * explicit color, color is 'auto', or color isn't reddish.
+ *
+ * Red is defined as: R component dominates (R > 150, R > G*1.4, R > B*1.4).
+ * This catches pure red, dark red, light red — but not orange, brown, or gray.
+ */
+function isRedRun(rElem) {
+  const rPr = rElem.getElementsByTagNameNS(WNS, 'rPr')[0];
+  if (!rPr) return false;
+  const colorEl = rPr.getElementsByTagNameNS(WNS, 'color')[0];
+  if (!colorEl) return false;
+  const val = colorEl.getAttributeNS(WNS, 'val');
+  if (!val || val === 'auto') return false;
+  // val is a hex string like "FF0000" (no leading #)
+  const hex = val.replace(/^#/, '');
+  if (!/^[0-9A-Fa-f]{6}$/.test(hex)) return false;
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  return r > 150 && r > g * 1.4 && r > b * 1.4;
+}
+
+/* ============================================================
+   Rich text helpers (runs of {t, red})
+   ============================================================ */
+
+// Normalize any value into a rich-text array. Strings become a single non-red run.
+function asRich(v) {
+  if (Array.isArray(v)) return v;
+  if (v === null || v === undefined || v === '') return [];
+  return [{ t: String(v), red: false }];
+}
+
+// Concatenate multiple rich texts with an optional separator.
+function richConcat(parts, sep) {
+  const sepRich = sep ? [{ t: sep, red: false }] : null;
+  const out = [];
+  parts.forEach((p, i) => {
+    const rich = asRich(p);
+    if (!rich.length) return;
+    if (i > 0 && sepRich && out.length) out.push(...sepRich);
+    out.push(...rich);
+  });
+  return mergeAdjacentRuns(out);
+}
+
+// Combine adjacent runs with the same color to reduce noise.
+function mergeAdjacentRuns(runs) {
+  const out = [];
+  for (const r of runs) {
+    if (!r.t) continue;
+    const last = out[out.length - 1];
+    if (last && !!last.red === !!r.red) last.t += r.t;
+    else out.push({ t: r.t, red: !!r.red });
+  }
+  return out;
+}
+
+// Plain string form of rich text (drops all color info).
+function richToPlain(v) {
+  return asRich(v).map(r => r.t).join('');
+}
+
+// Apply a string transformation to the plain text of a rich value,
+// preserving the coloring proportionally. Used for placeholder normalization.
+// Strategy: do the replacement on the plain text; if length is unchanged or
+// the transform is a 1:1 char map, we keep runs intact; otherwise we re-flow.
+// For our placeholder substitution (<PatientFirstName> -> [Patient First Name])
+// it's easiest to apply the transform on a per-run basis.
+function richMap(v, fn) {
+  return asRich(v).map(r => ({ t: fn(r.t), red: r.red })).filter(r => r.t.length > 0);
+}
+
+// Replace placeholder tags like <PatientFirstName> with [Patient First Name].
+function normalizePlaceholdersRich(v) {
+  return mergeAdjacentRuns(richMap(v, normalizePlaceholdersPlain));
+}
+
+function normalizePlaceholdersPlain(text) {
+  if (!text) return '';
+  return text.replace(/<([A-Z][a-zA-Z]+)>/g, (_, name) => {
+    const spaced = name.replace(/([a-z])([A-Z])/g, '$1 $2');
+    return '[' + spaced + ']';
+  });
+}
+
+// Keep the old name for non-rich callers
+function normalizePlaceholders(text) {
+  return normalizePlaceholdersPlain(text);
+}
+
+// Check whether any run in a rich text is red.
+function richHasRed(v) {
+  return asRich(v).some(r => r.red && r.t.length > 0);
+}
+
+// Split a rich text into an array of lines by '\n', preserving runs within each.
+function richSplitLines(v) {
+  const rich = asRich(v);
+  const lines = [[]];
+  for (const run of rich) {
+    const parts = run.t.split('\n');
+    parts.forEach((part, i) => {
+      if (i > 0) lines.push([]);
+      if (part.length) lines[lines.length - 1].push({ t: part, red: run.red });
+    });
+  }
+  // Drop empty trailing entries to match plain-text trim behavior
+  return lines.map(mergeAdjacentRuns);
+}
+
+// Trim leading/trailing whitespace from a rich text, preserving runs.
+function richTrim(v) {
+  const rich = asRich(v);
+  if (!rich.length) return [];
+  // Clone shallowly
+  const out = rich.map(r => ({ t: r.t, red: r.red }));
+  while (out.length && /^\s+$/.test(out[0].t)) out.shift();
+  if (out.length) out[0].t = out[0].t.replace(/^\s+/, '');
+  while (out.length && /^\s+$/.test(out[out.length - 1].t)) out.pop();
+  if (out.length) out[out.length - 1].t = out[out.length - 1].t.replace(/\s+$/, '');
+  return out.filter(r => r.t.length > 0);
+}
+
+// Remove the first `prefixLen` characters from a rich text, preserving the
+// colors of the remaining text. Used for parsing lines like
+// "Voice Response: ..." where we want to keep the runs of the value but drop
+// the label.
+function richStripPrefix(v, prefixLen) {
+  const rich = asRich(v);
+  let remaining = prefixLen;
+  let i = 0;
+  // Skip whole runs that are entirely consumed
+  while (i < rich.length && remaining >= rich[i].t.length) {
+    remaining -= rich[i].t.length;
+    i++;
+  }
+  const out = [];
+  if (i < rich.length && remaining > 0) {
+    out.push({ t: rich[i].t.substring(remaining), red: rich[i].red });
+    i++;
+  }
+  while (i < rich.length) {
+    out.push({ t: rich[i].t, red: rich[i].red });
+    i++;
+  }
+  return mergeAdjacentRuns(out);
+}
+
+/* ============================================================
+   Paragraph stream -> sections
+   ============================================================ */
+
+const FIELD_MAP = {
+  'question text:':    'questionText',
+  'sms question:':     'smsQuestion',
+  'transition text:':  'transitionText',
+  'intro text:':       'introText',
+  'responses:':        '__responses__',
+};
+
+// Defaults based on the standard PROMs/Spine template:
+// "No", "Not clear", and "Somewhat clear" get orange highlighting.
+// "Wrong Number" / "Opt Out" are NOT auto-flagged (they appear in black
+// in the reference templates) — but the user can toggle the checkbox.
+const DEFAULT_NEGATIVE = new Set([
+  'no',
+  'not clear',
+  'somewhat clear',
+]);
+
+function paragraphsToSections(paragraphs) {
+  const sections = [];
+  let current = null;
+  let currentField = null;
+  let currentResponse = null;
+  let docTitle = null;
+
+  function flushCurrent() {
+    if (current) sections.push(current);
+  }
+  function newSection(title) {
+    flushCurrent();
+    current = {
+      title,
+      language: null,
+      // All content fields below are stored as rich text arrays of runs.
+      questionText: [],
+      smsQuestion: [],
+      transitionText: [],
+      introText: [],
+      responses: [],
+    };
+    currentField = null;
+    currentResponse = null;
+  }
+
+  for (const p of paragraphs) {
+    const rawText = (p.text || '').replace(/\r/g, '');
+    const text = rawText.trim();
+    const style = p.style || '';
+    // Rich-text version of the paragraph contents (runs with color info)
+    const paraRuns = p.runs || asRich(rawText);
+
+    // Heading1: document title (only one expected). Headings never have body
+    // formatting we care to preserve, so we just take plain text.
+    if (style === 'Heading1') {
+      if (text) docTitle = text;
+      continue;
+    }
+
+    // Heading4: top-level grouping. Most are "Questions" (skip);
+    // some like "Voice Mails", "Sorry Messages" we treat as sections.
+    if (style === 'Heading4') {
+      if (/voice mail|sorry message/i.test(text)) {
+        newSection(text);
+      } else {
+        // "Questions" — separator only
+        flushCurrent();
+        current = null;
+        currentField = null;
+        currentResponse = null;
+      }
+      continue;
+    }
+
+    // Heading2: a new section (Introduction, Q1, Who Answered, etc.)
+    if (style === 'Heading2') {
+      if (text) newSection(text);
+      continue;
+    }
+
+    // Heading3: a field label inside the current section
+    if (style === 'Heading3') {
+      if (!current) continue;
+      const label = text.toLowerCase().replace(/\s+$/, '');
+      const key = FIELD_MAP[label];
+      if (key === '__responses__') {
+        currentField = '__responses__';
+        currentResponse = null;
+      } else if (key) {
+        currentField = key;
+      } else {
+        // Some other heading — log but continue; treat as unknown field
+        currentField = null;
+      }
+      continue;
+    }
+
+    // Not a heading -> body paragraph for the current section
+    if (!current) continue;
+
+    // Some paragraphs may contain multiple "logical" lines because they
+    // had <w:br/> separators. Process line by line for response-list parsing.
+    // We work with both the plain text (for regex matching) and the rich runs
+    // (for preserving red color in content values).
+    const plainLines = rawText.split('\n');
+    const richLines = richSplitLines(paraRuns);
+    // plainLines and richLines should be 1:1; defend with min length.
+    const lineCount = Math.min(plainLines.length, richLines.length);
+
+    for (let li = 0; li < lineCount; li++) {
+      const plainLineRaw = plainLines[li];
+      const richLineRaw = richLines[li];
+      const plainLine = plainLineRaw.trim();
+      const richLine = richTrim(richLineRaw);
+      if (!plainLine) continue;
+
+      // "Language: English" / "Language: Spanish" — start-of-section or
+      // mid-section language switch (Voice Mails / Sorry Messages pattern).
+      const langMatch = plainLine.match(/^Language:\s*(.+)$/i);
+      if (langMatch && currentField !== '__responses__') {
+        const newLang = langMatch[1].trim();
+        if (current.language && current.language !== newLang) {
+          // Same-title section continues in another language: start fresh
+          const continuationTitle = current.title;
+          sections.push(current);
+          current = {
+            title: continuationTitle, language: newLang,
+            questionText: [], smsQuestion: [],
+            transitionText: [], introText: [],
+            responses: [],
+          };
+          currentField = null;
+          currentResponse = null;
+        } else {
+          current.language = newLang;
+        }
+        continue;
+      }
+
+      // Inside Responses block
+      if (currentField === '__responses__') {
+        // Numbered response item: "1. Yes", "2. Wrong Number", etc.
+        const numMatch = plainLine.match(/^(\d+)[\.\)]\s*(.+)$/);
+        if (numMatch && !p.isListItem) {
+          // The response title may itself have red text. Find the start of
+          // the title within the rich line by stripping the leading "N. " prefix.
+          const prefixLen = numMatch[0].indexOf(numMatch[2]);
+          const titleRich = richStripPrefix(richLine, prefixLen);
+          currentResponse = {
+            number: parseInt(numMatch[1], 10),
+            title: titleRich,
+            voiceResponse: [],
+            smsResponse: [],
+            issuePanel: '',
+            alert: '',
+            nextQuestion: '',
+          };
+          current.responses.push(currentResponse);
+          continue;
+        }
+
+        // List-item bullets: "Issue Panel: None", "Alert: None", "Next Question: Q1"
+        // These come from paragraphs marked as list items in Word.
+        const bulletMatch = plainLine.match(/^([A-Za-z][A-Za-z ]+?):\s*(.*)$/);
+        if (bulletMatch && currentResponse) {
+          const label = bulletMatch[1].trim().toLowerCase();
+          const value = bulletMatch[2].trim();
+          // For label-style fields, we strip the "Label: " prefix from the rich
+          // text to preserve any color in the value.
+          const labelPrefixLen = plainLine.indexOf(bulletMatch[2]);
+          const valueRich = labelPrefixLen >= 0
+            ? richStripPrefix(richLine, labelPrefixLen)
+            : asRich(value);
+          const norm = (v) => (v && !/^none$/i.test(v)) ? v : '';
+          const normRich = (v, plain) => (plain && !/^none$/i.test(plain)) ? v : [];
+
+          if (label === 'issue panel') {
+            currentResponse.issuePanel = norm(value); continue;
+          }
+          if (label === 'alert') {
+            currentResponse.alert = norm(value); continue;
+          }
+          if (label === 'next question') {
+            currentResponse.nextQuestion = value; continue;
+          }
+          if (label === 'voice response') {
+            currentResponse.voiceResponse = normRich(valueRich, value); continue;
+          }
+          if (label === 'sms response') {
+            currentResponse.smsResponse = normRich(valueRich, value); continue;
+          }
+        }
+
+        // Unknown line inside responses — ignore
+        continue;
+      }
+
+      // Body content for whatever field is open
+      if (currentField && current[currentField] !== undefined) {
+        const sepRich = current[currentField].length ? [{ t: '\n', red: false }] : [];
+        current[currentField] = mergeAdjacentRuns(
+          [...current[currentField], ...sepRich, ...richLine]
+        );
+      }
+      // (if no current field, just drop the line)
+    }
+  }
+  flushCurrent();
+
+  // Group consecutive sections with the same title into one section that
+  // carries per-language variants. This lets the user later choose which
+  // languages to include in the output.
+  //
+  // Result section shape:
+  //   {
+  //     title: 'Q1',
+  //     // Map of language name (lowercased, e.g. 'english') -> per-language data
+  //     langs: {
+  //       english: { questionText, smsQuestion, transitionText, introText, responses: [...] },
+  //       spanish: { ... },
+  //     },
+  //     // Ordered list of languages as they appeared in the doc, for stable display
+  //     languageOrder: ['English', 'Spanish'],
+  //   }
+  const merged = [];
+  const allLanguagesSet = new Set();
+  let i = 0;
+  while (i < sections.length) {
+    const s = sections[i];
+    const group = [s];
+    // Greedily collect consecutive sections with the same title
+    while (i + 1 < sections.length && sections[i + 1].title === s.title) {
+      group.push(sections[i + 1]);
+      i++;
+    }
+    const langs = {};
+    const languageOrder = [];
+    group.forEach(g => {
+      // Default to "English" if the section has no explicit Language: marker
+      const langName = (g.language && g.language.trim()) || 'English';
+      const key = langName.toLowerCase();
+      if (!langs[key]) {
+        langs[key] = {
+          displayName: langName,
+          questionText: g.questionText,
+          smsQuestion: g.smsQuestion,
+          transitionText: g.transitionText,
+          introText: g.introText,
+          responses: g.responses,
+        };
+        languageOrder.push(langName);
+      } else {
+        // Same language seen twice — concatenate (rare case)
+        const existing = langs[key];
+        existing.questionText = richConcat([existing.questionText, g.questionText], '\n');
+        existing.smsQuestion = richConcat([existing.smsQuestion, g.smsQuestion], '\n');
+        if (!existing.responses.length) existing.responses = g.responses;
+      }
+      allLanguagesSet.add(langName);
+    });
+    merged.push({ title: s.title, langs, languageOrder });
+    i++;
+  }
+
+  // Flow-order pass: starting from the first section (entry point), walk the
+  // "Next Question" pointers across all languages to produce a flow-ordered
+  // sequence. Sections not reached by any pointer are dropped — this handles
+  // the case where the Word doc contains old versions of sections (e.g.
+  // "New Medications" v1) that are no longer referenced by the current flow.
+  //
+  // For sections without responses (like Intro, Instructions, Goodbye), we
+  // fall through to the next section in document order that hasn't yet been
+  // visited — this preserves the implicit "flows to the next section" semantic.
+  const ordered = orderSectionsByFlow(merged);
+
+  return { sections: ordered, docTitle, allLanguages: Array.from(allLanguagesSet) };
+}
+
+/**
+ * Reorder and filter sections according to the "Next Question" flow graph.
+ * Returns a new array with only reachable sections, in flow order.
+ *
+ * @param sections array of merged sections (each with .title and .langs)
+ */
+function orderSectionsByFlow(sections) {
+  if (!sections.length) return sections;
+
+  // Build title -> doc-order index map. Multiple sections shouldn't share a
+  // title after merging, but defend against it by keeping the first occurrence.
+  const byTitle = {};
+  sections.forEach((s, i) => {
+    if (!(s.title in byTitle)) byTitle[s.title] = i;
+  });
+
+  // Helper: collect all distinct Next Question targets from any language of a section
+  function nextTargets(section) {
+    const seen = new Set();
+    const out = [];
+    for (const langKey in section.langs) {
+      const ld = section.langs[langKey];
+      if (!ld.responses) continue;
+      for (const r of ld.responses) {
+        const nq = (r.nextQuestion || '').trim();
+        if (nq && byTitle[nq] !== undefined && !seen.has(nq)) {
+          seen.add(nq);
+          out.push(nq);
+        }
+      }
+    }
+    return out;
+  }
+
+  // Helper: does this section have ANY responses across any language?
+  function hasAnyResponses(section) {
+    for (const langKey in section.langs) {
+      const ld = section.langs[langKey];
+      if (ld.responses && ld.responses.length) return true;
+    }
+    return false;
+  }
+
+  const visited = new Set();
+  const result = [];
+
+  function visit(title) {
+    if (!(title in byTitle) || visited.has(title)) return;
+    visited.add(title);
+    const idx = byTitle[title];
+    const s = sections[idx];
+    result.push(s);
+
+    // Follow Next Question pointers (in the order they appear)
+    const targets = nextTargets(s);
+    for (const t of targets) visit(t);
+
+    // If no outgoing pointers and no responses, fall through to the LITERAL
+    // next section in doc order (not "next unvisited"). This handles sections
+    // like Intro, Instructions, and Voice Mails / Sorry Messages that flow
+    // implicitly to the section that follows them in the document.
+    //
+    // Using "literal next" rather than "next unvisited" is important: if a
+    // terminal section like Goodbye has already-visited sections after it in
+    // doc order (because pointers jumped earlier in the doc), we must NOT
+    // search past those to find an orphan section. The chain ends naturally
+    // when the next section in doc order is already visited.
+    if (targets.length === 0 && !hasAnyResponses(s)) {
+      const nextIdx = idx + 1;
+      if (nextIdx < sections.length) {
+        const nextTitle = sections[nextIdx].title;
+        if (!visited.has(nextTitle)) {
+          visit(nextTitle);
+        }
+        // else: chain ends; do not search further
+      }
+    }
+  }
+
+  // Start traversal from the first section in doc order (the entry point)
+  visit(sections[0].title);
+
+  return result;
+}
+
+/* ============================================================
+   Sections -> table rows
+   ============================================================ */
+
+function buildVoiceTextForLang(langData) {
+  // Build voice text by combining transition + intro + question text
+  // (each is rich text). The intro often comes "...of" + intro phrase,
+  // so we glue them with a period in that case.
+  const transition = asRich(langData.transitionText);
+  const intro = normalizePlaceholdersRich(langData.introText);
+  const question = asRich(langData.questionText);
+
+  const parts = [];
+  if (transition.length) parts.push(transition);
+  if (intro.length) {
+    if (parts.length) {
+      const last = parts[parts.length - 1];
+      const lastPlain = richToPlain(last);
+      if (/\bof\s*$/i.test(lastPlain)) {
+        // Glue intro onto the last part with " " and trailing "."
+        parts[parts.length - 1] = richConcat([last, ' ', intro, '.'], '');
+      } else {
+        parts.push(intro);
+      }
+    } else {
+      parts.push(intro);
+    }
+  }
+  if (question.length) parts.push(question);
+  return normalizePlaceholdersRich(richConcat(parts, ' '));
+}
+
+/**
+ * Combine per-language rich texts into a single cell value, joined by a blank
+ * line so the languages read as separate paragraphs in the Excel cell.
+ */
+function combineLangs(section, selectedLanguages, accessor) {
+  const parts = [];
+  for (const lang of selectedLanguages) {
+    const ld = section.langs[lang.toLowerCase()];
+    if (!ld) continue;
+    const v = accessor(ld);
+    if (v && (Array.isArray(v) ? v.length : v.length > 0)) parts.push(v);
+  }
+  return richConcat(parts, '\n\n');
+}
+
+/**
+ * Build table rows from sections, respecting the user's language selection.
+ *
+ * For each section, we need a consistent count of "response rows" across all
+ * languages, since responses are positional (1. Yes, 2. Somewhat, 3. No, ...).
+ * We use the response list from the first selected language that has any.
+ *
+ * Special case: the "Language" section's responses ARE language choices (each
+ * row corresponds to a language the caller could choose). When the user has
+ * deselected one of those languages, the corresponding row is dropped — it
+ * doesn't apply to the script they're producing.
+ */
+function sectionsToRows(sections, selectedLanguages) {
+  const rows = [];
+  // Default to English-only if nothing selected
+  const langs = (selectedLanguages && selectedLanguages.length)
+    ? selectedLanguages
+    : ['English'];
+  const langsLower = new Set(langs.map(l => l.toLowerCase()));
+
+  for (const s of sections) {
+    const qNumMatch = s.title.match(/^(Q\d+)$/);
+    const qNum = qNumMatch ? qNumMatch[1] : '';
+    const category = s.title;
+    const isLanguageSection = /^language$/i.test(s.title);
+
+    // The default Language cell value for this section reflects which selected
+    // languages actually have content in this section. (A section may not
+    // contain a Spanish version even if Spanish is selected globally — in that
+    // case the Language label shows only the languages that contributed.)
+    // For the special Language section, each row's value is overridden below
+    // to match the language being chosen.
+    const presentLangs = langs.filter(l => s.langs[l.toLowerCase()]);
+    const sectionLanguageLabel = (presentLangs.length ? presentLangs : langs).join(' / ');
+
+    // Compose voice text and SMS question text by stacking selected languages
+    const voice = combineLangs(s, langs, ld => buildVoiceTextForLang(ld));
+    const sms = combineLangs(s, langs, ld => normalizePlaceholdersRich(ld.smsQuestion));
+
+    // Find a "spine" of responses — use the first selected language that has them
+    let spineLang = null;
+    for (const lang of langs) {
+      const ld = s.langs[lang.toLowerCase()];
+      if (ld && ld.responses && ld.responses.length) { spineLang = lang; break; }
+    }
+
+    if (spineLang) {
+      const spine = s.langs[spineLang.toLowerCase()].responses;
+
+      // Build all candidate response rows first, then drop language-choice
+      // rows that don't apply, and only THEN assign the "first row of section"
+      // values (category, voice, sms) to the first surviving row.
+      const sectionRows = [];
+      spine.forEach((spineResponse, idx) => {
+        // In the Language section, each response is itself a language name.
+        // Drop the row if that language isn't selected.
+        if (isLanguageSection) {
+          const respLang = richToPlain(spineResponse.title).trim().toLowerCase();
+          if (respLang && !langsLower.has(respLang)) {
+            return; // skip this response row entirely
+          }
+        }
+
+        // For each selected language, find the response at this position;
+        // they share the same index/number across languages.
+        const titles = [];
+        const voiceResponses = [];
+        const smsResponses = [];
+        let issuePanel = '';
+        let alert = '';
+        let nextQuestion = '';
+
+        for (const lang of langs) {
+          const ld = s.langs[lang.toLowerCase()];
+          if (!ld || !ld.responses) continue;
+          const r = ld.responses[idx];
+          if (!r) continue;
+          if (r.title && (Array.isArray(r.title) ? r.title.length : r.title.length)) titles.push(r.title);
+          if (r.voiceResponse && (Array.isArray(r.voiceResponse) ? r.voiceResponse.length : r.voiceResponse.length)) voiceResponses.push(r.voiceResponse);
+          if (r.smsResponse && (Array.isArray(r.smsResponse) ? r.smsResponse.length : r.smsResponse.length)) smsResponses.push(r.smsResponse);
+          // Metadata fields (Issue Panel, Alert, Next Question) are taken from
+          // the first selected language that has them. They are not translated.
+          if (!issuePanel && r.issuePanel) issuePanel = r.issuePanel;
+          if (!alert && r.alert) alert = r.alert;
+          if (!nextQuestion && r.nextQuestion) nextQuestion = r.nextQuestion;
+        }
+
+        const responseTitle = dedupeJoinRich(titles, ' / ');
+        const voiceResponse = richConcat(voiceResponses, '\n\n');
+        const smsResponse = richConcat(smsResponses, '\n\n');
+
+        const titleLower = richToPlain(spineResponse.title).trim().toLowerCase();
+        const isEndType = titleLower.includes('wrong number') || titleLower.includes('opt out');
+
+        // Determine the Language label for this row.
+        // - Language section: each row represents a specific language choice,
+        //   so the cell shows just that language (e.g. "English").
+        // - Other sections: show the full selected-languages list.
+        let rowLanguage;
+        if (isLanguageSection) {
+          // Title-case the response title (e.g. "english" -> "English")
+          const t = richToPlain(spineResponse.title).trim();
+          rowLanguage = t ? (t.charAt(0).toUpperCase() + t.slice(1).toLowerCase()) : sectionLanguageLabel;
+        } else {
+          rowLanguage = sectionLanguageLabel;
+        }
+
+        sectionRows.push({
+          timeframe: '',
+          category: '',
+          qnum: '',
+          language: rowLanguage,
+          voice: [],
+          sms: [],
+          responseTitle: responseTitle,
+          voiceResponse: voiceResponse,
+          smsResponse: smsResponse,
+          nextQuestion: nextQuestion || (isEndType ? '[End]' : ''),
+          alert: alert,
+          issuePanel: issuePanel,
+          negative: DEFAULT_NEGATIVE.has(titleLower),
+        });
+      });
+
+      // Assign section-level header values to the first surviving row.
+      // If no rows survived (e.g. Language section with zero selected languages
+      // matching its responses — shouldn't happen but defend anyway), emit a
+      // single row with just the prompts so the section isn't lost.
+      if (sectionRows.length === 0) {
+        rows.push({
+          timeframe: '', category: category, qnum: qNum, language: sectionLanguageLabel,
+          voice: voice, sms: sms,
+          responseTitle: [], voiceResponse: [], smsResponse: [],
+          nextQuestion: '', alert: '', issuePanel: '', negative: false,
+        });
+      } else {
+        sectionRows[0].category = category;
+        sectionRows[0].qnum = qNum;
+        sectionRows[0].voice = voice;
+        sectionRows[0].sms = sms;
+        for (const r of sectionRows) rows.push(r);
+      }
+    } else {
+      // No responses anywhere — single row with just the prompts
+      rows.push({
+        timeframe: '',
+        category: category,
+        qnum: qNum,
+        language: sectionLanguageLabel,
+        voice: voice,
+        sms: sms,
+        responseTitle: [],
+        voiceResponse: [],
+        smsResponse: [],
+        nextQuestion: '',
+        alert: '',
+        issuePanel: '',
+        negative: false,
+      });
+    }
+  }
+  return rows;
+}
+
+// De-duplicate rich texts by their plain-text key, then join with separator.
+function dedupeJoinRich(richArr, sep) {
+  const seen = new Set();
+  const out = [];
+  for (const v of richArr) {
+    const plain = richToPlain(v).trim().toLowerCase();
+    if (!plain || seen.has(plain)) continue;
+    seen.add(plain);
+    out.push(v);
+  }
+  return richConcat(out, sep);
+}
+
+function dedupeJoin(arr, sep) {
+  const seen = new Set();
+  const out = [];
+  for (const v of arr) {
+    if (!v) continue;
+    const key = v.trim().toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(v);
+  }
+  return out.join(sep);
+}
+
+/* ============================================================
+   UI State & Rendering
+   ============================================================ */
+
+/* ============================================================
+   Multi-document state
+   ============================================================ */
+
+// The app maintains an array of documents, each with its own parsed data,
+// row state, language selection, and metadata fields. The UI shows one
+// document at a time (the "active" doc); the export iterates over all of them.
+let state = {
+  documents: [],       // Array of doc objects (see makeDoc below)
+  activeDocId: null,   // ID of currently displayed doc
+  nextDocId: 1,        // Counter for unique IDs
+};
+
+function makeDoc(file, parsedSections, docTitle, availableLanguages) {
+  const id = 'doc' + state.nextDocId++;
+  const defaultLangs = availableLanguages.includes('English')
+    ? ['English']
+    : (availableLanguages.length ? [availableLanguages[0]] : []);
+
+  const title = docTitle || (file && file.name ? file.name.replace(/\.docx$/i, '') : 'Script');
+  const initialRows = sectionsToRows(parsedSections, defaultLangs);
+
+  return {
+    id,
+    fileName: file && file.name ? file.name : (title + '.docx'),
+    parsedSections,
+    availableLanguages,
+    selectedLanguages: defaultLangs,
+    rows: initialRows,
+    parsedRows: deepCloneRows(initialRows),
+    sheetName: title.substring(0, 31),
+    workbookTitle: title,
+    defaultTimeframe: '3 days PD -Voice\n \n 4 days - SMS',
+  };
+}
+
+// Convenience accessor for the current document. Returns null if no docs loaded.
+function getActiveDoc() {
+  if (!state.activeDocId) return null;
+  return state.documents.find(d => d.id === state.activeDocId) || null;
+}
+
+function setActiveDoc(id) {
+  state.activeDocId = id;
+  renderDocTabs();
+  renderMetaFields();
+  initLanguagePicker();
+  renderTable();
+}
+
+// Deep-clone rows so the "parsed snapshot" is independent of the live state.
+// Rich-text fields are arrays of objects, so we need a real deep clone.
+function deepCloneRows(rows) {
+  return rows.map(r => {
+    const out = {};
+    for (const k in r) {
+      const v = r[k];
+      if (Array.isArray(v)) out[k] = v.map(x => ({ ...x }));
+      else out[k] = v;
+    }
+    return out;
+  });
+}
+
+function blankRow() {
+  return {
+    timeframe: '', category: '', qnum: '', language: '',
+    voice: [], sms: [],
+    responseTitle: [], voiceResponse: [], smsResponse: [],
+    nextQuestion: '', alert: '', issuePanel: '',
+    negative: false,
+  };
+}
+
+// Fields that can contain rich text (red coloring preserved from the doc)
+const RICH_FIELDS = new Set(['voice','sms','responseTitle','voiceResponse','smsResponse']);
+
+// Plain text fields rendered as <textarea>
+const PLAIN_FIELDS = ['timeframe','category','qnum','language','nextQuestion','alert','issuePanel'];
+
+function renderTable() {
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+
+  const doc = getActiveDoc();
+  if (!doc) {
+    document.getElementById('rowCount').textContent = '';
+    return;
+  }
+  const rows = doc.rows;
+
+  rows.forEach((row, idx) => {
+    const tr = document.createElement('tr');
+    if (row.category) tr.classList.add('section-divider');
+
+    // Actions
+    const actions = document.createElement('td');
+    actions.className = 'row-actions';
+    actions.innerHTML = `
+      <div>
+        <button class="small" data-act="up" data-idx="${idx}" title="Move up">↑</button>
+        <button class="small" data-act="down" data-idx="${idx}" title="Move down">↓</button>
+      </div>
+      <div>
+        <button class="small" data-act="insert" data-idx="${idx}" title="Insert row below">+</button>
+        <button class="small danger" data-act="delete" data-idx="${idx}" title="Delete row">×</button>
+      </div>
+    `;
+    tr.appendChild(actions);
+
+    // Render in display order: timeframe, category, qnum, language, voice, sms,
+    // responseTitle, voiceResponse, smsResponse, nextQuestion, alert, issuePanel
+    const fieldOrder = ['timeframe','category','qnum','language','voice','sms','responseTitle','voiceResponse','smsResponse','nextQuestion','alert','issuePanel'];
+
+    fieldOrder.forEach(key => {
+      const td = document.createElement('td');
+      if (key === 'responseTitle' && row.negative) td.classList.add('negative');
+
+      if (RICH_FIELDS.has(key)) {
+        // Rich-text editor: contenteditable div with colored spans
+        const div = document.createElement('div');
+        div.className = 'cell-edit cell-rich';
+        div.contentEditable = 'true';
+        div.spellcheck = false;
+        div.innerHTML = richToHtml(row[key]);
+        div.addEventListener('input', () => {
+          doc.rows[idx][key] = htmlToRich(div);
+          autoSizeRich(div);
+        });
+        div.addEventListener('focus', () => autoSizeRich(div));
+        // Paste handler: insert as plain text to avoid pasted formatting bringing
+        // in arbitrary styles. Red coloring from THIS doc is preserved on load
+        // but user pastes default to neutral text.
+        div.addEventListener('paste', (e) => {
+          e.preventDefault();
+          const t = (e.clipboardData || window.clipboardData).getData('text/plain');
+          document.execCommand('insertText', false, t);
+        });
+        td.appendChild(div);
+        tr.appendChild(td);
+        requestAnimationFrame(() => autoSizeRich(div));
+      } else {
+        // Plain textarea
+        const ta = document.createElement('textarea');
+        ta.className = 'cell-edit';
+        ta.value = (row[key] != null) ? String(row[key]) : '';
+        ta.rows = 1;
+        ta.addEventListener('input', (e) => {
+          doc.rows[idx][key] = e.target.value;
+          autoSize(e.target);
+        });
+        ta.addEventListener('focus', () => autoSize(ta));
+        td.appendChild(ta);
+        tr.appendChild(td);
+        requestAnimationFrame(() => autoSize(ta));
+      }
+    });
+
+    // Highlight Orange toggle
+    const negTd = document.createElement('td');
+    negTd.innerHTML = `<div class="negative-toggle"><input type="checkbox" id="neg-${idx}" data-act="negative" data-idx="${idx}" ${row.negative ? 'checked' : ''}><label for="neg-${idx}">Orange</label></div>`;
+    tr.appendChild(negTd);
+
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('rowCount').textContent =
+    rows.length + ' row' + (rows.length === 1 ? '' : 's');
+}
+
+function autoSize(ta) {
+  ta.style.height = 'auto';
+  ta.style.height = Math.min(ta.scrollHeight, 220) + 'px';
+}
+
+function autoSizeRich(div) {
+  // contenteditable divs auto-size naturally; we just cap the max height
+  div.style.maxHeight = '220px';
+}
+
+// Render rich text as HTML for the contenteditable editor.
+// Red runs become <span class="t-red">...</span>; newlines become <br>.
+function richToHtml(v) {
+  const rich = asRich(v);
+  if (!rich.length) return '';
+  return rich.map(run => {
+    const escaped = escapeHtml(run.t).replace(/\n/g, '<br>');
+    return run.red ? `<span class="t-red">${escaped}</span>` : escaped;
+  }).join('');
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Convert contenteditable's HTML back into a rich text runs array.
+// We walk the DOM, classifying each text node by whether any ancestor has
+// the t-red class (or explicit red color).
+function htmlToRich(rootElem) {
+  const runs = [];
+  function walk(node, isRed) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      if (node.textContent) runs.push({ t: node.textContent, red: isRed });
+      return;
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+    const tag = node.tagName.toLowerCase();
+    if (tag === 'br') {
+      runs.push({ t: '\n', red: isRed });
+      return;
+    }
+    if (tag === 'div' || tag === 'p') {
+      // Treat block elements as causing a newline if there's prior content
+      if (runs.length && runs[runs.length - 1].t.slice(-1) !== '\n') {
+        runs.push({ t: '\n', red: isRed });
+      }
+    }
+    // Detect red: class or inline style
+    let nodeRed = isRed;
+    if (node.classList && node.classList.contains('t-red')) nodeRed = true;
+    if (node.style && node.style.color) {
+      const c = node.style.color.toLowerCase().replace(/\s+/g, '');
+      // Catch "red", "#ff0000", "rgb(255,0,0)" etc.
+      if (c === 'red' || /^#?ff0000$/i.test(c) || /^rgb\(2[0-5][0-9],0,0\)/.test(c)) nodeRed = true;
+    }
+    for (const child of node.childNodes) walk(child, nodeRed);
+  }
+  for (const child of rootElem.childNodes) walk(child, false);
+  return mergeAdjacentRuns(runs);
+}
+
+document.getElementById('tableBody').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-act]');
+  if (!btn) return;
+  const doc = getActiveDoc();
+  if (!doc) return;
+  const idx = parseInt(btn.dataset.idx, 10);
+  const act = btn.dataset.act;
+  if (act === 'up' && idx > 0) {
+    [doc.rows[idx-1], doc.rows[idx]] = [doc.rows[idx], doc.rows[idx-1]];
+    renderTable();
+  } else if (act === 'down' && idx < doc.rows.length - 1) {
+    [doc.rows[idx+1], doc.rows[idx]] = [doc.rows[idx], doc.rows[idx+1]];
+    renderTable();
+  } else if (act === 'insert') {
+    doc.rows.splice(idx+1, 0, blankRow());
+    renderTable();
+  } else if (act === 'delete') {
+    doc.rows.splice(idx, 1);
+    renderTable();
+  }
+});
+
+document.getElementById('tableBody').addEventListener('change', (e) => {
+  if (e.target.matches('input[data-act="negative"]')) {
+    const doc = getActiveDoc();
+    if (!doc) return;
+    const idx = parseInt(e.target.dataset.idx, 10);
+    doc.rows[idx].negative = e.target.checked;
+    renderTable();
+  }
+});
+
+document.getElementById('addRowBtn').addEventListener('click', () => {
+  const doc = getActiveDoc();
+  if (!doc) return;
+  doc.rows.push(blankRow());
+  renderTable();
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  const doc = getActiveDoc();
+  if (!doc) return;
+  if (!confirm('Discard all edits and reset to the originally parsed data?')) return;
+  doc.rows = deepCloneRows(doc.parsedRows);
+  renderTable();
+  showToast('Reset to parsed data', 'info');
+});
+
+/* ============================================================
+   File upload
+   ============================================================ */
+
+const uploadArea = document.getElementById('uploadArea');
+const fileInput = document.getElementById('fileInput');
+
+['dragenter','dragover'].forEach(ev =>
+  uploadArea.addEventListener(ev, e => { e.preventDefault(); uploadArea.classList.add('dragover'); }));
+['dragleave','drop'].forEach(ev =>
+  uploadArea.addEventListener(ev, e => { e.preventDefault(); uploadArea.classList.remove('dragover'); }));
+uploadArea.addEventListener('drop', (e) => {
+  const files = Array.from(e.dataTransfer.files);
+  if (files.length) handleFiles(files);
+});
+fileInput.addEventListener('change', (e) => {
+  const files = Array.from(e.target.files);
+  if (files.length) handleFiles(files);
+  // Reset so the same file can be re-selected if needed
+  e.target.value = '';
+});
+
+async function handleFiles(files) {
+  document.getElementById('debugPanel').textContent = '';
+  document.getElementById('debugPanel').classList.remove('visible');
+
+  let addedCount = 0;
+  let failedCount = 0;
+  let firstAddedId = null;
+  for (const file of files) {
+    if (!file.name.toLowerCase().endsWith('.docx')) {
+      showToast('Skipped non-.docx file: ' + file.name, 'error', 4000);
+      failedCount++;
+      continue;
+    }
+    try {
+      const paragraphs = await parseDocxFile(file);
+      const { sections, docTitle, allLanguages } = paragraphsToSections(paragraphs);
+      const doc = makeDoc(file, sections, docTitle, allLanguages);
+      if (!doc.rows.length) {
+        throw new Error('No content parsed from this document');
+      }
+      state.documents.push(doc);
+      if (!firstAddedId) firstAddedId = doc.id;
+      addedCount++;
+    } catch (err) {
+      console.error('Failed to parse', file.name, err);
+      showToast('Failed to parse "' + file.name + '": ' + err.message, 'error', 6000);
+      debugLog('ERROR (' + file.name + '): ' + err.message);
+      failedCount++;
+    }
+  }
+
+  if (addedCount > 0) {
+    // Show file info on the upload area
+    const fileInfo = document.getElementById('fileInfo');
+    fileInfo.textContent = '✓ ' + state.documents.length + ' document' + (state.documents.length === 1 ? '' : 's') + ' loaded';
+    uploadArea.classList.add('has-file');
+
+    document.getElementById('reviewCard').style.display = '';
+    document.getElementById('exportCard').style.display = '';
+
+    // Switch to the first newly-added doc if there wasn't one active
+    if (!state.activeDocId) {
+      setActiveDoc(firstAddedId);
+    } else {
+      renderDocTabs();
+    }
+
+    const msg = addedCount === 1
+      ? 'Added 1 document'
+      : 'Added ' + addedCount + ' documents';
+    showToast(msg, 'success');
+  } else if (failedCount > 0) {
+    showToast('No documents could be parsed', 'error', 5000);
+  }
+}
+
+// Backward-compat alias used by older code paths
+async function handleFile(file) {
+  return handleFiles([file]);
+}
+
+/* ============================================================
+   Document tabs
+   ============================================================ */
+
+function renderDocTabs() {
+  const bar = document.getElementById('docTabs');
+  if (!bar) return;
+  bar.innerHTML = '';
+
+  state.documents.forEach(doc => {
+    const tab = document.createElement('div');
+    tab.className = 'doc-tab' + (doc.id === state.activeDocId ? ' active' : '');
+    tab.dataset.docId = doc.id;
+    tab.title = doc.fileName;
+
+    const label = document.createElement('span');
+    label.className = 'doc-tab-label';
+    label.textContent = doc.sheetName || doc.fileName;
+    tab.appendChild(label);
+
+    const close = document.createElement('button');
+    close.className = 'doc-tab-close';
+    close.innerHTML = '×';
+    close.title = 'Remove this document';
+    close.addEventListener('click', (e) => {
+      e.stopPropagation();
+      removeDoc(doc.id);
+    });
+    tab.appendChild(close);
+
+    tab.addEventListener('click', () => {
+      if (doc.id !== state.activeDocId) setActiveDoc(doc.id);
+    });
+    bar.appendChild(tab);
+  });
+
+  // "+" tab for adding more documents
+  const addBtn = document.createElement('button');
+  addBtn.className = 'doc-tab-add';
+  addBtn.innerHTML = '+ Add';
+  addBtn.title = 'Upload another .docx file';
+  addBtn.addEventListener('click', () => {
+    document.getElementById('fileInput').click();
+  });
+  bar.appendChild(addBtn);
+}
+
+function removeDoc(id) {
+  const doc = state.documents.find(d => d.id === id);
+  if (!doc) return;
+  // If there are unsaved edits, warn
+  const orig = JSON.stringify(doc.parsedRows);
+  const curr = JSON.stringify(doc.rows);
+  if (curr !== orig) {
+    if (!confirm('Remove "' + (doc.sheetName || doc.fileName) + '"? Any edits to this document will be lost.')) return;
+  }
+  state.documents = state.documents.filter(d => d.id !== id);
+  if (state.activeDocId === id) {
+    state.activeDocId = state.documents.length ? state.documents[0].id : null;
+  }
+  if (state.documents.length === 0) {
+    document.getElementById('reviewCard').style.display = 'none';
+    document.getElementById('exportCard').style.display = 'none';
+    uploadArea.classList.remove('has-file');
+    document.getElementById('fileInfo').textContent = '';
+  } else {
+    document.getElementById('fileInfo').textContent = '✓ ' + state.documents.length + ' document' + (state.documents.length === 1 ? '' : 's') + ' loaded';
+  }
+  renderDocTabs();
+  renderMetaFields();
+  initLanguagePicker();
+  renderTable();
+}
+
+// Sync the meta-field inputs (Sheet Name, Workbook Title, Default Timeframe)
+// with the active document's values.
+function renderMetaFields() {
+  const doc = getActiveDoc();
+  const sheetName = document.getElementById('sheetName');
+  const workbookTitle = document.getElementById('workbookTitle');
+  const defaultTimeframe = document.getElementById('defaultTimeframe');
+  if (!doc) {
+    sheetName.value = '';
+    workbookTitle.value = '';
+    defaultTimeframe.value = '';
+    return;
+  }
+  sheetName.value = doc.sheetName || '';
+  workbookTitle.value = doc.workbookTitle || '';
+  defaultTimeframe.value = doc.defaultTimeframe || '';
+}
+
+// Wire up meta-field inputs to update the active doc's state
+['sheetName', 'workbookTitle', 'defaultTimeframe'].forEach(id => {
+  document.getElementById(id).addEventListener('input', (e) => {
+    const doc = getActiveDoc();
+    if (!doc) return;
+    if (id === 'sheetName') {
+      doc.sheetName = e.target.value;
+      renderDocTabs(); // update tab label
+    } else if (id === 'workbookTitle') doc.workbookTitle = e.target.value;
+    else if (id === 'defaultTimeframe') doc.defaultTimeframe = e.target.value;
+  });
+});
+
+/* ============================================================
+   Language multiselect picker
+   ============================================================ */
+
+function initLanguagePicker() {
+  const menu = document.getElementById('langPickerMenu');
+  menu.innerHTML = '';
+
+  const doc = getActiveDoc();
+  if (!doc || !doc.availableLanguages.length) {
+    menu.innerHTML = '<div class="lang-picker-empty">No languages detected</div>';
+    updateLangPickerLabel();
+    return;
+  }
+
+  doc.availableLanguages.forEach(lang => {
+    const opt = document.createElement('label');
+    opt.className = 'lang-picker-option';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.value = lang;
+    cb.checked = doc.selectedLanguages.includes(lang);
+    cb.addEventListener('change', () => {
+      onLanguageToggle(lang, cb.checked);
+    });
+    const span = document.createElement('span');
+    span.textContent = lang;
+    opt.appendChild(cb);
+    opt.appendChild(span);
+    menu.appendChild(opt);
+  });
+
+  updateLangPickerLabel();
+}
+
+function updateLangPickerLabel() {
+  const label = document.getElementById('langPickerLabel');
+  const doc = getActiveDoc();
+  if (!doc) { label.textContent = ''; return; }
+  if (doc.selectedLanguages.length === 0) {
+    label.textContent = 'None selected';
+  } else if (doc.selectedLanguages.length === doc.availableLanguages.length) {
+    label.textContent = 'All (' + doc.selectedLanguages.join(', ') + ')';
+  } else {
+    label.textContent = doc.selectedLanguages.join(', ');
+  }
+}
+
+function onLanguageToggle(lang, checked) {
+  const doc = getActiveDoc();
+  if (!doc) return;
+
+  if (checked) {
+    if (!doc.selectedLanguages.includes(lang)) {
+      doc.selectedLanguages = doc.availableLanguages.filter(
+        l => l === lang || doc.selectedLanguages.includes(l)
+      );
+    }
+  } else {
+    doc.selectedLanguages = doc.selectedLanguages.filter(l => l !== lang);
+  }
+
+  // Need at least one language; if user unchecked the last one, undo it
+  if (doc.selectedLanguages.length === 0) {
+    doc.selectedLanguages = [lang];
+    const cb = document.querySelector(`#langPickerMenu input[value="${cssEscape(lang)}"]`);
+    if (cb) cb.checked = true;
+    showToast('At least one language must be selected', 'error', 3000);
+    updateLangPickerLabel();
+    return;
+  }
+
+  applyLanguageSelection();
+}
+
+function applyLanguageSelection() {
+  const doc = getActiveDoc();
+  if (!doc) return;
+
+  // Check whether there are unsaved edits relative to parsedRows
+  const hasEdits = JSON.stringify(doc.rows) !== JSON.stringify(doc.parsedRows);
+  if (hasEdits) {
+    const ok = confirm(
+      'Changing the language selection will rebuild the table from the parsed document and discard any edits you have made. Continue?'
+    );
+    if (!ok) {
+      return;
+    }
+  }
+
+  const newRows = sectionsToRows(doc.parsedSections, doc.selectedLanguages);
+  doc.rows = newRows;
+  doc.parsedRows = deepCloneRows(newRows);
+  updateLangPickerLabel();
+  renderTable();
+}
+
+// Minimal CSS.escape polyfill for attribute selector safety
+function cssEscape(s) {
+  return String(s).replace(/[^a-zA-Z0-9_-]/g, ch => '\\' + ch);
+}
+
+// Wire up the picker toggle button and outside-click dismissal
+(function setupLangPickerToggle() {
+  const btn = document.getElementById('langPickerBtn');
+  const menu = document.getElementById('langPickerMenu');
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = !menu.hidden;
+    if (isOpen) {
+      menu.hidden = true;
+      btn.setAttribute('aria-expanded', 'false');
+    } else {
+      menu.hidden = false;
+      btn.setAttribute('aria-expanded', 'true');
+    }
+  });
+  document.addEventListener('click', (e) => {
+    if (!menu.contains(e.target) && e.target !== btn) {
+      menu.hidden = true;
+      btn.setAttribute('aria-expanded', 'false');
+    }
+  });
+})();
+
+/* ============================================================
+   Excel export — builds the xlsx file directly using JSZip.
+   The workbook contains:
+     Sheet 1: Legal Disclaimer (always first)
+     Sheets 2..N+1: one per uploaded document
+   ============================================================ */
+
+const LEGAL_DISCLAIMER_TITLE = 'Legal Disclaimer';
+const LEGAL_DISCLAIMER_INTRO = "Acceptance and use of this template constitutes acknowledgment of CipherHealth's exclusive intellectual property rights as detailed below.";
+const LEGAL_DISCLAIMER_BODY = "CIPHERHEALTH PROPRIETARY SCRIPT TEMPLATE. © 2026 CipherHealth. All rights reserved. This document, including all text, logic, branching, and cadencing, constitutes CipherHealth Intellectual Property and Confidential Information under the governing agreement. CipherHealth retains exclusive ownership of this material and all derivative works, including modifications made collaboratively with Customer. Distribution to third parties (including competitors or consultants) or use to configure, build, or transition to alternative systems is strictly prohibited.";
+
+async function exportToExcel() {
+  try {
+    if (!window.JSZip) {
+      showToast('JSZip library failed to load (check internet connection)', 'error', 6000);
+      return;
+    }
+    if (state.documents.length === 0) {
+      showToast('No documents to export', 'error');
+      return;
+    }
+
+    // Build the list of sheets to include.
+    // Sheet 0 is always the Legal Disclaimer; sheets 1..N are per-document data.
+    const sheets = [];
+    sheets.push(buildLegalDisclaimerSheet());
+
+    // Track used names to dedupe collisions (Excel requires unique sheet names <=31 chars).
+    const usedNames = new Set([sheets[0].name.toLowerCase()]);
+    for (const doc of state.documents) {
+      let baseName = (doc.sheetName || doc.fileName || 'Script').substring(0, 31).trim() || 'Script';
+      let name = baseName;
+      let i = 2;
+      while (usedNames.has(name.toLowerCase())) {
+        const suffix = ' (' + i + ')';
+        name = (baseName.substring(0, 31 - suffix.length) + suffix);
+        i++;
+      }
+      usedNames.add(name.toLowerCase());
+      sheets.push(buildDataSheet(doc, name));
+    }
+
+    // Build the xlsx ZIP
+    const zip = new JSZip();
+    zip.file('[Content_Types].xml', buildContentTypesXml(sheets.length));
+    zip.file('_rels/.rels', ROOT_RELS_XML);
+    zip.file('xl/workbook.xml', buildWorkbookXml(sheets.map(s => s.name)));
+    zip.file('xl/_rels/workbook.xml.rels', buildWorkbookRelsXml(sheets.length));
+    zip.file('xl/styles.xml', STYLES_XML);
+    sheets.forEach((s, i) => {
+      zip.file(`xl/worksheets/sheet${i + 1}.xml`,
+        buildSheetXml(s.data, s.merges, s.colWidths, s.rowHeights, s.autoFilterRef));
+    });
+    zip.file('docProps/core.xml', CORE_XML);
+    zip.file('docProps/app.xml', APP_XML);
+
+    const blob = await zip.generateAsync({
+      type: 'blob',
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      compression: 'DEFLATE',
+    });
+
+    const downloadName = (state.documents.length === 1
+      ? (state.documents[0].fileName.replace(/\.docx$/i, '') || 'Script')
+      : 'Scripts') + '.xlsx';
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = downloadName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+    showToast('Excel workbook downloaded', 'success');
+  } catch (err) {
+    console.error('Export error:', err);
+    showToast('Export failed: ' + err.message, 'error', 8000);
+    debugLog('EXPORT ERROR: ' + err.message);
+    debugLog(err.stack || '');
+  }
+}
+
+document.getElementById('exportBtn').addEventListener('click', exportToExcel);
+
+/**
+ * Build the Legal Disclaimer sheet definition.
+ * Layout:
+ *   Row 1: Sheet title "Legal Disclaimer" (large, CipherHealth Dark Anchor)
+ *   Row 3: Intro line
+ *   Row 5: Body paragraph
+ */
+function buildLegalDisclaimerSheet() {
+  const STYLE = LEGAL_STYLE;
+  const data = [
+    [{ v: LEGAL_DISCLAIMER_TITLE, style: STYLE.TITLE }],
+    [],
+    [{ v: LEGAL_DISCLAIMER_INTRO, style: STYLE.INTRO }],
+    [],
+    [{ v: LEGAL_DISCLAIMER_BODY, style: STYLE.BODY }],
+  ];
+  return {
+    name: LEGAL_DISCLAIMER_TITLE,
+    data,
+    merges: [
+      { ref: 'A1:H1' },
+      { ref: 'A3:H3' },
+      { ref: 'A5:H5' },
+    ],
+    colWidths: [16, 16, 16, 16, 16, 16, 16, 16],
+    rowHeights: { 1: 40, 3: 36, 5: 160 },
+    autoFilterRef: null,
+  };
+}
+
+/**
+ * Build a data sheet for one uploaded document.
+ */
+function buildDataSheet(doc, sheetName) {
+  const headerNote = 'Please note, responses in orange italics indicate response are negative and no responses for SMS, a negative response and that an alert will be sent to your follow-up staff. The Title with the "*" is considered the first medical question. If response is in black then it will not be part of the SMS communication.';
+  const colHeaders = ['Timeframe','Question Category','Question #','Language','Voice Call Question Text','SMS Question Text','Response Title','Voice Response','SMS Response','Next Question','Alert','Issue Panel'];
+
+  const STYLE = { DEFAULT: 0, TITLE: 1, NOTE: 2, HEADER: 3, BODY: 4, BODY_NEG: 5 };
+
+  const data = [];
+  data.push([{ v: doc.workbookTitle || 'Script', style: STYLE.TITLE }]);
+  data.push([{ v: headerNote, style: STYLE.NOTE }]);
+  data.push([]);
+  data.push(colHeaders.map(h => ({ v: h, style: STYLE.HEADER })));
+
+  // Data rows
+  let firstDataRowAdded = false;
+  doc.rows.forEach(r => {
+    let timeframe = r.timeframe || '';
+    if (!firstDataRowAdded && !timeframe) {
+      timeframe = doc.defaultTimeframe || '';
+      firstDataRowAdded = true;
+    }
+    const titleStyle = r.negative ? STYLE.BODY_NEG : STYLE.BODY;
+    data.push([
+      { v: timeframe,             style: STYLE.BODY },              // A
+      { v: r.category || '',      style: STYLE.BODY },              // B
+      { v: r.qnum || '',          style: STYLE.BODY },              // C
+      { v: r.language || '',      style: STYLE.BODY },              // D
+      { v: r.voice,               style: STYLE.BODY, rich: true },  // E
+      { v: r.sms,                 style: STYLE.BODY, rich: true },  // F
+      { v: r.responseTitle,       style: titleStyle, rich: true },  // G
+      { v: r.voiceResponse,       style: STYLE.BODY, rich: true },  // H
+      { v: r.smsResponse,         style: STYLE.BODY, rich: true },  // I
+      { v: r.nextQuestion || '',  style: STYLE.BODY },              // J
+      { v: r.alert || '',         style: STYLE.BODY },              // K
+      { v: r.issuePanel || '',    style: STYLE.BODY },              // L
+    ]);
+  });
+
+  // Merges
+  const merges = [
+    { ref: 'A1:L1' },
+    { ref: 'A2:L2' },
+  ];
+  const dataStartRow = 5;
+  let groupStart = dataStartRow;
+  let groupStartIdx = 0;
+  for (let i = 0; i < doc.rows.length; i++) {
+    const rowNum = dataStartRow + i;
+    const next = doc.rows[i + 1];
+    const closesGroup = !next || next.category;
+    if (closesGroup && rowNum > groupStart) {
+      merges.push({ ref: `B${groupStart}:B${rowNum}` });
+      merges.push({ ref: `E${groupStart}:E${rowNum}` });
+      merges.push({ ref: `F${groupStart}:F${rowNum}` });
+
+      const firstLang = doc.rows[groupStartIdx].language || '';
+      let allSame = true;
+      for (let j = groupStartIdx + 1; j <= i; j++) {
+        if ((doc.rows[j].language || '') !== firstLang) { allSame = false; break; }
+      }
+      if (allSame) {
+        merges.push({ ref: `D${groupStart}:D${rowNum}` });
+      }
+    }
+    if (closesGroup) {
+      groupStart = rowNum + 1;
+      groupStartIdx = i + 1;
+    }
+  }
+
+  const colWidths = [14, 17, 13, 18, 65, 55, 23, 30, 30, 24, 9, 14];
+  const rowHeights = { 1: 30, 2: 45, 4: 20 };
+
+  const headerRow = 4;
+  const lastDataRow = headerRow + doc.rows.length;
+  const autoFilterRef = `A${headerRow}:L${lastDataRow}`;
+
+  return {
+    name: sheetName,
+    data,
+    merges,
+    colWidths,
+    rowHeights,
+    autoFilterRef,
+  };
+}
+
+// Legal Disclaimer style indices (within the same styles.xml shared by all sheets).
+// We'll reuse existing styles where possible:
+//   TITLE: index 6 (Dark Anchor color, 22pt bold)
+//   INTRO: index 7 (11pt, italic, dark text)
+//   BODY:  index 8 (10.5pt, dark text, wrap, top)
+const LEGAL_STYLE = { TITLE: 6, INTRO: 7, BODY: 8 };
+
+// ---- OOXML helpers ----
+
+function xmlEscape(s) {
+  if (s === null || s === undefined) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+    // Strip control chars except tab/LF/CR (xlsx is strict about these)
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+}
+
+// Convert 1-based column index to Excel letters (1->A, 27->AA, etc.)
+function colLetter(n) {
+  let s = '';
+  while (n > 0) {
+    const m = (n - 1) % 26;
+    s = String.fromCharCode(65 + m) + s;
+    n = Math.floor((n - 1) / 26);
+  }
+  return s;
+}
+
+function buildSheetXml(sheetData, merges, colWidths, rowHeights, autoFilterRef) {
+  let xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
+  xml += '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">';
+  xml += '<sheetViews><sheetView workbookViewId="0"/></sheetViews>';
+  xml += '<sheetFormatPr defaultRowHeight="15"/>';
+
+  // <cols>: column widths
+  if (colWidths && colWidths.length) {
+    xml += '<cols>';
+    colWidths.forEach((w, i) => {
+      const col = i + 1;
+      xml += `<col min="${col}" max="${col}" width="${w}" customWidth="1"/>`;
+    });
+    xml += '</cols>';
+  }
+
+  // <sheetData>
+  xml += '<sheetData>';
+  sheetData.forEach((row, rIdx) => {
+    const rowNum = rIdx + 1;
+    const ht = rowHeights && rowHeights[rowNum];
+    const heightAttr = ht ? ` ht="${ht}" customHeight="1"` : '';
+    if (!row || row.length === 0) {
+      // Empty row — still emit if it has a custom height (e.g. row 3)
+      if (heightAttr) xml += `<row r="${rowNum}"${heightAttr}/>`;
+      return;
+    }
+    xml += `<row r="${rowNum}"${heightAttr}>`;
+    row.forEach((cell, cIdx) => {
+      const ref = colLetter(cIdx + 1) + rowNum;
+      const v = cell.v;
+      const style = cell.style || 0;
+      // Decide whether this cell holds rich text (runs with colors) or plain.
+      if (cell.rich && Array.isArray(v) && v.length > 0 && v.some(r => r && r.t)) {
+        // Multi-run inline string
+        let isContent = '';
+        for (const run of v) {
+          if (!run.t) continue;
+          if (run.red) {
+            // <r><rPr><color rgb="FFCC0000"/></rPr><t>...</t></r>
+            isContent += `<r><rPr><color rgb="FFCC0000"/><sz val="11"/><rFont val="Calibri"/></rPr><t xml:space="preserve">${xmlEscape(run.t)}</t></r>`;
+          } else {
+            isContent += `<r><rPr><sz val="11"/><rFont val="Calibri"/></rPr><t xml:space="preserve">${xmlEscape(run.t)}</t></r>`;
+          }
+        }
+        if (isContent) {
+          xml += `<c r="${ref}" s="${style}" t="inlineStr"><is>${isContent}</is></c>`;
+        } else {
+          xml += `<c r="${ref}" s="${style}"/>`;
+        }
+      } else {
+        // Plain text cell — value may be a string, an empty array, or rich
+        // text that the caller didn't mark as rich (e.g. a plain field).
+        const plain = Array.isArray(v) ? richToPlain(v) : v;
+        if (plain === '' || plain === null || plain === undefined) {
+          xml += `<c r="${ref}" s="${style}"/>`;
+        } else {
+          xml += `<c r="${ref}" s="${style}" t="inlineStr"><is><t xml:space="preserve">${xmlEscape(plain)}</t></is></c>`;
+        }
+      }
+    });
+    xml += '</row>';
+  });
+  xml += '</sheetData>';
+
+  // <autoFilter> — must precede <mergeCells> in the schema element order.
+  if (autoFilterRef) {
+    xml += `<autoFilter ref="${autoFilterRef}"/>`;
+  }
+
+  // <mergeCells>
+  if (merges && merges.length) {
+    xml += `<mergeCells count="${merges.length}">`;
+    merges.forEach(m => { xml += `<mergeCell ref="${m.ref}"/>`; });
+    xml += '</mergeCells>';
+  }
+
+  xml += '</worksheet>';
+  return xml;
+}
+
+function buildWorkbookXml(sheetNames) {
+  let xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+    '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">';
+  xml += '<sheets>';
+  sheetNames.forEach((name, i) => {
+    xml += `<sheet name="${xmlEscape(name)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`;
+  });
+  xml += '</sheets></workbook>';
+  return xml;
+}
+
+function buildContentTypesXml(sheetCount) {
+  let xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+    '<Default Extension="xml" ContentType="application/xml"/>' +
+    '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>';
+  for (let i = 1; i <= sheetCount; i++) {
+    xml += `<Override PartName="/xl/worksheets/sheet${i}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`;
+  }
+  xml += '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
+    '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>' +
+    '<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>' +
+    '</Types>';
+  return xml;
+}
+
+function buildWorkbookRelsXml(sheetCount) {
+  let xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">';
+  // Worksheets first (rId1..rIdN), then styles
+  for (let i = 1; i <= sheetCount; i++) {
+    xml += `<Relationship Id="rId${i}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i}.xml"/>`;
+  }
+  xml += `<Relationship Id="rId${sheetCount + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>`;
+  xml += '</Relationships>';
+  return xml;
+}
+
+const ROOT_RELS_XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+  '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+  '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>' +
+  '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>' +
+  '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>' +
+  '</Relationships>';
+
+const CORE_XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+  '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">' +
+  '<dc:creator>Script Converter</dc:creator>' +
+  '<cp:lastModifiedBy>Script Converter</cp:lastModifiedBy>' +
+  '</cp:coreProperties>';
+
+const APP_XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+  '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">' +
+  '<Application>Script Converter</Application>' +
+  '</Properties>';
+
+// styles.xml: defines fonts, fills, borders, alignments, and cellXfs.
+// Style indices used by buildSheetXml:
+//   0 = default
+//   1 = title (bold 24pt) — data sheet workbook title row
+//   2 = note (wrap, top) — data sheet note row
+//   3 = header (bold white on dark blue, centered, bordered) — column headers
+//   4 = body (wrap, top, bordered) — normal data
+//   5 = body, negative response (orange text, wrap, top, bordered)
+//   6 = legal disclaimer title (bold 22pt, CipherHealth Dark Anchor)
+//   7 = legal disclaimer intro (11pt italic)
+//   8 = legal disclaimer body (10.5pt, wrap, top, justified)
+const STYLES_XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+'<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+  '<fonts count="9">' +
+    '<font><sz val="11"/><color rgb="FF000000"/><name val="Calibri"/></font>' +                        // 0 default
+    '<font><b/><sz val="24"/><color rgb="FF000000"/><name val="Calibri"/></font>' +                    // 1 title
+    '<font><sz val="11"/><color rgb="FF000000"/><name val="Calibri"/></font>' +                        // 2 note
+    '<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>' +                    // 3 header
+    '<font><sz val="11"/><color rgb="FF000000"/><name val="Calibri"/></font>' +                        // 4 body
+    '<font><sz val="11"/><color rgb="FFFF9900"/><name val="Calibri"/></font>' +                        // 5 negative
+    '<font><b/><sz val="22"/><color rgb="FF2D2660"/><name val="Calibri"/></font>' +                    // 6 legal title (Dark Anchor)
+    '<font><i/><sz val="11"/><color rgb="FF2D2660"/><name val="Calibri"/></font>' +                    // 7 legal intro
+    '<font><sz val="10.5"/><color rgb="FF1A2332"/><name val="Calibri"/></font>' +                      // 8 legal body
+  '</fonts>' +
+  '<fills count="3">' +
+    '<fill><patternFill patternType="none"/></fill>' +
+    '<fill><patternFill patternType="gray125"/></fill>' +
+    '<fill><patternFill patternType="solid"><fgColor rgb="FF1F4E78"/><bgColor indexed="64"/></patternFill></fill>' +
+  '</fills>' +
+  '<borders count="2">' +
+    '<border><left/><right/><top/><bottom/><diagonal/></border>' +
+    '<border>' +
+      '<left style="thin"><color rgb="FFBFBFBF"/></left>' +
+      '<right style="thin"><color rgb="FFBFBFBF"/></right>' +
+      '<top style="thin"><color rgb="FFBFBFBF"/></top>' +
+      '<bottom style="thin"><color rgb="FFBFBFBF"/></bottom>' +
+      '<diagonal/>' +
+    '</border>' +
+  '</borders>' +
+  '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
+  '<cellXfs count="9">' +
+    '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +                                                                                           // 0
+    '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="left" vertical="center" wrapText="1"/></xf>' +    // 1
+    '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="left" vertical="top" wrapText="1"/></xf>' +       // 2
+    '<xf numFmtId="0" fontId="3" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>' + // 3
+    '<xf numFmtId="0" fontId="4" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="top" wrapText="1"/></xf>' +  // 4
+    '<xf numFmtId="0" fontId="5" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="top" wrapText="1"/></xf>' +  // 5
+    '<xf numFmtId="0" fontId="6" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="left" vertical="center" wrapText="1"/></xf>' +    // 6 legal title
+    '<xf numFmtId="0" fontId="7" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="left" vertical="top" wrapText="1"/></xf>' +       // 7 legal intro
+    '<xf numFmtId="0" fontId="8" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="left" vertical="top" wrapText="1"/></xf>' +       // 8 legal body
+  '</cellXfs>' +
+  '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>' +
+'</styleSheet>';
+</script>
+</body>
+</html>
+
