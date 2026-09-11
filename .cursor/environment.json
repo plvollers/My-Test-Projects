@@ -1,12 +1,6 @@
 {
   "name": "Script Converter — Word to Excel",
-  "terminals": [
-    {
-      "name": "web",
-      "command": "python3 -m http.server 8000",
-      "description": "Serves the static Script Converter web app. Open http://localhost:8000/index.html to convert Word rounding scripts into the standard Excel workbook."
-    }
-  ],
+  "start": "python3 -m http.server 8000 --directory /workspace",
   "ports": [
     {
       "name": "web server",
