@@ -1,0 +1,10 @@
+{
+  "name": "Script Converter — Word to Excel",
+  "start": "python3 -m http.server 8000 --directory /workspace",
+  "ports": [
+    {
+      "name": "web server",
+      "port": 8000
+    }
+  ]
+}
