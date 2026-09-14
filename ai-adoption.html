@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CipherHealth AI Adoption — Month over Month by Department</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --teal: #00B4A4;
+      --violet: #5B4FB5;
+      --chartreuse: #B5CC2E;
+      --amber: #E8A020;
+      --anchor: #2D2660;
+      --lavender: #F2F1F9;
+      --text: #1c1833;
+      --muted: #5c5678;
+      --line: #e4e0f0;
+      --card: #ffffff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--lavender);
+      color: var(--text);
+    }
+    header {
+      background: var(--anchor);
+      color: #fff;
+      padding: 28px 36px 24px;
+    }
+    header h1 {
+      margin: 0 0 6px;
+      font-size: 24px;
+      font-weight: 650;
+      letter-spacing: -0.02em;
+    }
+    header p {
+      margin: 0;
+      color: #d8d4ea;
+      font-size: 14px;
+      max-width: 820px;
+      line-height: 1.45;
+    }
+    .wrap { padding: 24px 36px 48px; max-width: 1280px; }
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .kpi {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px 18px;
+    }
+    .kpi .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .kpi .value { font-size: 28px; font-weight: 700; margin-top: 4px; color: var(--anchor); }
+    .kpi .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 20px 22px 16px;
+      margin-bottom: 18px;
+    }
+    .card h2 {
+      margin: 0 0 4px;
+      font-size: 16px;
+      font-weight: 650;
+      color: var(--anchor);
+    }
+    .card .sub {
+      margin: 0 0 16px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .chart-box { position: relative; height: 420px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--line);
+      text-align: right;
+    }
+    th:first-child, td:first-child { text-align: left; }
+    th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; }
+    tfoot td { font-weight: 700; border-bottom: none; }
+    .notes {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+    .notes a { color: var(--violet); }
+    .notes ul { margin: 8px 0 0; padding-left: 18px; }
+    .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+    .toggle {
+      display: flex; gap: 8px; margin: 0 0 14px;
+    }
+    .toggle button {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--anchor);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .toggle button.active {
+      background: var(--anchor);
+      color: #fff;
+      border-color: var(--anchor);
+    }
+    @media (max-width: 900px) {
+      .kpis { grid-template-columns: 1fr 1fr; }
+      .wrap, header { padding-left: 16px; padding-right: 16px; }
+      .chart-box { height: 360px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>AI adoption by department</h1>
+    <p>
+      Unique CipherHealth employees active in <strong>#cipher_ai</strong> each month, mapped to Salesforce department.
+      Cursor company trial started 26 Jun 2026. September is month-to-date through 14 Sep.
+    </p>
+  </header>
+  <main class="wrap">
+    <section class="kpis">
+      <div class="kpi">
+        <div class="label">Peak unique users</div>
+        <div class="value">28</div>
+        <div class="hint">July 2026, across 11 departments</div>
+      </div>
+      <div class="kpi">
+        <div class="label">July → August</div>
+        <div class="value">−18%</div>
+        <div class="hint">28 unique posters → 23 after spend caps</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Survey respondents</div>
+        <div class="value">58</div>
+        <div class="hint">Kate’s 22 Jul AI-platform survey</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Sep MTD unique</div>
+        <div class="value">11</div>
+        <div class="hint">Through 14 Sep (partial month)</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Unique AI-active employees, month over month</h2>
+      <p class="sub">Each line is a department. A person counts once per month if they posted in #cipher_ai (joins, leaves, and bots excluded).</p>
+      <div class="toggle">
+        <button class="active" data-metric="unique">Unique people</button>
+        <button data-metric="volume">Message volume</button>
+      </div>
+      <div class="chart-box"><canvas id="adoptionChart"></canvas></div>
+    </section>
+
+    <section class="card">
+      <h2>Unique people by department</h2>
+      <p class="sub">Primary adoption view. September is 1–14 Sep only.</p>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Department</th>
+              <th>Jun 2026</th>
+              <th>Jul 2026</th>
+              <th>Aug 2026</th>
+              <th>Sep 1–14</th>
+            </tr>
+          </thead>
+          <tbody id="uniqueTable"></tbody>
+          <tfoot>
+            <tr>
+              <td>Total unique</td>
+              <td>21</td>
+              <td>28</td>
+              <td>23</td>
+              <td>11</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>How to read this</h2>
+      <div class="notes">
+        <ul>
+          <li><strong>What this measures:</strong> visible company AI activity in Slack’s #cipher_ai, not Cursor token spend. Local Cursor/Claude usage that never shows up in Slack is invisible here.</li>
+          <li><strong>Why this source:</strong> CipherHealth does not expose Cursor admin analytics through current connectors. #cipher_ai is the company AI channel Kate Huber launched 5 Jun 2026; the Cursor enterprise trial went live 26 Jun.</li>
+          <li><strong>Department mapping:</strong> Salesforce <code>UserRole</code> and title (CSM → Customer Success, Implementation → Professional Services, CRE/SDR → Sales, Technology/Engineering → Technology, etc.).</li>
+          <li><strong>August dip:</strong> matches the 19 Aug spend guardrails ($50 non-eng / $200 eng, Grok + Composer only). Several people hit monthly limits (Emma Chowns 17 Aug; CS leadership asking what to do after the cap).</li>
+          <li><strong>Technology stays high:</strong> Kate (AI ops), engineering, and platform folks keep posting product/connector updates, so Tech is both usage and enablement traffic.</li>
+          <li><strong>Customer Success:</strong> strong July (trial + wins: transition docs, customer one-pagers) then fewer unique posters in Aug/Sep even as CS leadership is running dedicated AI enablement.</li>
+          <li>Cursor admin spend by user/department would be the gold-standard usage chart. Kate or a Cursor org admin can export that from the Cursor dashboard to overlay on this.</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+  <script>
+    const months = ["Jun 2026", "Jul 2026", "Aug 2026", "Sep 1–14"];
+    const colors = {
+      "Customer Success": "#00B4A4",
+      "Professional Services": "#5B4FB5",
+      "Sales": "#E8A020",
+      "Technology": "#2D2660",
+      "Product": "#B5CC2E",
+      "Marketing": "#8B7EC8",
+      "Clinical": "#D45D79",
+      "Support": "#3A8A8C",
+      "Finance": "#4A6FA5",
+      "Analytics": "#C45C26",
+      "Leadership": "#6B7280"
+    };
+    const unique = {
+      "Customer Success": [4, 5, 3, 0],
+      "Professional Services": [3, 2, 2, 1],
+      "Sales": [3, 4, 4, 3],
+      "Technology": [6, 9, 8, 5],
+      "Product": [1, 1, 0, 0],
+      "Marketing": [1, 1, 1, 0],
+      "Clinical": [1, 1, 2, 1],
+      "Support": [0, 1, 0, 0],
+      "Finance": [1, 1, 1, 0],
+      "Analytics": [0, 1, 1, 0],
+      "Leadership": [1, 2, 1, 1]
+    };
+    const volume = {
+      "Customer Success": [7, 14, 10, 0],
+      "Professional Services": [6, 4, 13, 1],
+      "Sales": [4, 7, 7, 4],
+      "Technology": [31, 36, 34, 24],
+      "Product": [8, 2, 0, 0],
+      "Marketing": [2, 3, 1, 0],
+      "Clinical": [1, 2, 7, 1],
+      "Support": [0, 1, 0, 0],
+      "Finance": [1, 2, 4, 0],
+      "Analytics": [0, 1, 1, 0],
+      "Leadership": [1, 16, 4, 3]
+    };
+
+    const tbody = document.getElementById("uniqueTable");
+    Object.keys(unique).forEach(dept => {
+      const row = document.createElement("tr");
+      const vals = unique[dept];
+      row.innerHTML = `<td><span class="dot" style="background:${colors[dept]}"></span>${dept}</td>` +
+        vals.map(v => `<td>${v}</td>`).join("");
+      tbody.appendChild(row);
+    });
+
+    function datasets(metric) {
+      const src = metric === "volume" ? volume : unique;
+      return Object.keys(src).map(dept => ({
+        label: dept,
+        data: src[dept],
+        borderColor: colors[dept],
+        backgroundColor: colors[dept],
+        tension: 0.25,
+        borderWidth: 2.5,
+        pointRadius: 4,
+        pointHoverRadius: 6
+      }));
+    }
+
+    const ctx = document.getElementById("adoptionChart");
+    const chart = new Chart(ctx, {
+      type: "line",
+      data: { labels: months, datasets: datasets("unique") },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "nearest", intersect: false },
+        plugins: {
+          legend: {
+            position: "bottom",
+            labels: { boxWidth: 12, font: { size: 12 }, padding: 14 }
+          },
+          tooltip: {
+            callbacks: {
+              footer: (items) => {
+                const total = items.reduce((s, i) => s + i.parsed.y, 0);
+                return "Total: " + total;
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { precision: 0 },
+            grid: { color: "#eeeaf6" },
+            title: { display: true, text: "Unique people" }
+          },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+
+    document.querySelectorAll(".toggle button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".toggle button").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        const metric = btn.dataset.metric;
+        chart.data.datasets = datasets(metric);
+        chart.options.scales.y.title.text = metric === "volume" ? "Messages in #cipher_ai" : "Unique people";
+        chart.update();
+      });
+    });
+  </script>
+</body>
+</html>
